@@ -2420,6 +2420,33 @@ async function linkDataFile(create){
 }
 async function unlinkDataFile(){ PST.fh = null; PST.fileOK = false; await idbSet('fh', null); persistStatus(); toast('Arquivo de dados desvinculado (os dados continuam salvos no navegador).'); }
 
+/* ---------- dados publicados junto com o programa (dados.json ao lado do index.html) ----------
+   O computador grava o arquivo de dados vinculado nessa pasta e o Publicar.bat envia ao GitHub; o aplicativo, ao abrir
+   (e a cada 5 min / ao voltar para ele), baixa o dados.json e MESCLA com o que tem: os avanços do computador chegam
+   sozinhos e os lançados no celular não se perdem. Só quando o programa está publicado (http/https). */
+const REM = {busy:false, last:null};
+async function dadosRemotos(force){
+  if(!/^https?:/.test(location.protocol) || REM.busy || !DB) return;
+  if(!force && document.hidden) return;
+  REM.busy = true;
+  try{
+    const r = await fetch('dados.json?t=' + Date.now(), {cache:'no-store'}); if(!r.ok) return;
+    const d = await r.json(); if(!d || !Array.isArray(d.weeks) || !Array.isArray(d.records)) return;
+    const seen = pref('remoteSeen');
+    if(d.savedAt && d.savedAt !== seen && d.savedAt !== DB.savedAt){
+      const antes = DB.records.length;
+      DB = mergeDB(DB, d); PST.ids = null; trackDeletes(); pref('remoteSeen', d.savedAt); save(); refreshAll();
+      const n = DB.records.length - antes;
+      toast(`Dados do computador recebidos (${new Date(d.savedAt).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})})${n > 0 ? ` · ${n} registro(s) novo(s)` : ''}.`);
+    }
+    REM.last = new Date();
+  }catch(e){ /* sem internet ou sem dados.json publicado: segue com o que tem */ }
+  finally{ REM.busy = false; }
+}
+setTimeout(() => dadosRemotos(true), 2500);
+setInterval(() => dadosRemotos(false), 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) dadosRemotos(false); });
+
 /* =====================================================================
    Maquete 3D — relevo (blocos), acessos com camadas construtivas por estaca,
    aerogeradores, rótulos, seleção e navegação
@@ -6735,6 +6762,8 @@ function campoManifest(){
     const mf = {name:'GPEXPAN CW28882 · Digital Twin', short_name:'GPEXPAN', description:'Drenagem e melhorias nos acessos — Complexo Eólico GPEXPAN', start_url:location.href.split('#')[0], scope:location.href.replace(/[^/]*$/, ''), display:'standalone', orientation:'any', background_color:'#eef1f6', theme_color:'#1e3a5f',
       icons:[{src:'data:image/svg+xml,' + ico, sizes:'any', type:'image/svg+xml', purpose:'any'}]};
     const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(mf)); document.head.appendChild(l);
+    // publicado (https) com manifest.webmanifest ao lado: usa o arquivo (necessário para gerar o APK no PWABuilder)
+    if(/^https?:/.test(location.protocol)) fetch('manifest.webmanifest', {method:'HEAD'}).then(r => { if(r.ok) l.href = 'manifest.webmanifest'; }).catch(() => {});
     // com o programa publicado em https (ex.: GitHub Pages) e o sw.js ao lado, passa a abrir sem internet
     if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   }catch(e){}
