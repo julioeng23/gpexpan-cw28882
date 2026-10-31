@@ -2868,7 +2868,6 @@ function buildRoads(){
   // camadas de serviço
   const acts = actsVis().filter(a => !SEM_LAYOUT.includes(a));
   acts.forEach(act => {
-    if(act === 'LANC' && (UI.lancMode || 'montes') === 'montes'){ buildPiles(W); return; }
     const L = LAYER_GEO[act], B = Buf();
     ACC_IDS.forEach(id => { const a = ACC[id]; if(a.kind === 'BW' && !UI.layers.bw) return;
       for(let k=1;k<=a.nseg;k++){
@@ -3061,8 +3060,12 @@ function buildEnsaios(){
 function onResize(){
   const st = $('#stage'); const w = st.clientWidth, h = st.clientHeight; if(!w || !h) return;
   renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); G3.dirty = true;
-  // com a tela mais larga (tela cheia), reenquadra a vista geral para não aparecer vazio nas laterais
-  if(controls && camera.position.distanceTo(controls.target) > 5000 && !G3.fly && !viewInside(camera.position, controls.target)){
+  // com a tela mais larga (tela cheia), reenquadra a vista geral para não aparecer vazio nas laterais.
+  // Só quando a LARGURA muda e fora do modo campo: no celular a altura muda o tempo todo (teclado, barra do
+  // navegador, painel) e o reenquadramento fazia a vista "voltar" sozinha.
+  const wChanged = onResize._w !== undefined && onResize._w !== w; onResize._w = w;
+  const campo = typeof CAMPO !== 'undefined' && CAMPO.on;
+  if(wChanged && !campo && controls && camera.position.distanceTo(controls.target) > 5000 && !G3.fly && !viewInside(camera.position, controls.target)){
     const t = controls.target.clone(), off = camera.position.clone().sub(t), d = off.length(), pol = Math.acos(Math.min(1, off.y / d)), az = Math.atan2(off.x, off.z);
     camera.position.copy(t).add(camOff(fitInside(t, d, pol, az), pol, az)); }
 }
@@ -3419,9 +3422,8 @@ function renderParks(){
   $$('#parks .park').forEach(el => el.onclick = () => { const p = el.dataset.park; UI.sel = null; updateMarker(); if(p === '__all__'){ homeView(); renderDetail(); } else focusPark(p); });
 }
 function renderLayers(){
-  UI.lancMode = UI.lancMode || pref('lancMode') || 'montes';
-  $('#layers').innerHTML = `<div class="layer" style="cursor:default"><span class="nm">Lançamento como</span><span class="seg2"><b data-lm="montes" class="${UI.lancMode==='montes'?'on':''}">Montes</b><b data-lm="faixa" class="${UI.lancMode==='faixa'?'on':''}">Faixa</b></span></div>` + LAYERS.map(([k,n]) => `<div class="layer" data-k="${k}"><span class="nm">${n}</span><span class="sw ${UI.layers[k]?'on':''}"></span></div>`).join('');
-  $$('#layers [data-lm]').forEach(b => b.onclick = () => { UI.lancMode = b.dataset.lm; pref('lancMode', UI.lancMode); renderLayers(); buildRoads(); renderLegend(); });
+  UI.lancMode = 'faixa';   // lançamento representado sempre como faixa (os montes foram retirados)
+  $('#layers').innerHTML = LAYERS.map(([k,n]) => `<div class="layer" data-k="${k}"><span class="nm">${n}</span><span class="sw ${UI.layers[k]?'on':''}"></span></div>`).join('');
   $$('#layers .layer[data-k]').forEach(el => el.onclick = () => {
     const k = el.dataset.k; UI.layers[k] = !UI.layers[k]; el.querySelector('.sw').classList.toggle('on', UI.layers[k]); needRender();
     if(k === 'turb') G3.turbines.forEach(t => t.visible = UI.layers.turb);
@@ -3450,7 +3452,7 @@ function renderTimeline(){
 function renderLegend(){
   const it = (c, t) => `<span class="li"><span class="sq" style="background:${c}"></span>${t}</span>`;
   let h = '<div class="lt">Executado</div>' + actsVis().map(a => ACT[a]).filter(A => !SEM_LAYOUT.includes(A.id)).map(A => it(A.color, A.short)).join('') + it(ROADCOL.GPX, 'Acesso GPEXPAN a executar') + it(ROADCOL.BW, 'Compartilhado GPEXPAN/BW a executar');
-  if(UI.act === 'ALL') h += `<div class="lt" style="margin-top:5px">Camadas</div><span class="li">faixa larga = limpeza · ${UI.lancMode === 'faixa' ? 'placa = lançamento · placa superior = base' : 'montes de cascalho = lançamento · placa = base'} · bordas = drenagem · postes = sinalização</span>`;
+  if(UI.act === 'ALL') h += `<div class="lt" style="margin-top:5px">Camadas</div><span class="li">faixa larga = limpeza · placa = lançamento · placa superior = base · bordas = drenagem · postes = sinalização</span>`;
   if(UI.layers.drain && GEO.drain) h += '<div class="lt" style="margin-top:5px">Drenagem existente (as-built ARA · TE2 · PAP · TM2; projeto ACA)</div>' + Object.entries(DRN).filter(([k]) => GEO.drain.linear.some(d => d.t === k) || GEO.drain.pontual.some(d => d.t === k)).map(([k,T]) => it(T.color, T.name)).join('');
   const min = pref('legendMin') === '1';
   $('#legend3d').innerHTML = `<div class="lt hd" id="lg-h"><span>Legenda</span><span>${min ? '▾ mostrar' : '▴ ocultar'}</span></div><div class="body">${h}${GEO.credits ? `<div class="li" style="margin-top:6px;font-size:9px;opacity:.65;line-height:1.3">${esc(GEO.credits)}</div>` : ''}</div>`;
@@ -5322,7 +5324,7 @@ async function recordVideo(o){
   }
   const t0w = performance.now(), N = Math.ceil(total * VFPS);
   if(rec) rec.start(500);
-  const lancMontes = (UI.lancMode || 'montes') === 'montes';
+  const lancMontes = false;   // lançamento sempre como faixa
   let i = 0;
   try{
     for(i = 0; i < N && !cancel && !VID.err; i++){
