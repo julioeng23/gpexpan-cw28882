@@ -1426,6 +1426,14 @@ body.campo .lbl3.est{font-size:10px}
 .cs-dev{font-size:15px}.cs-btn.sm{min-height:32px;padding:5px 10px;font-size:12px}
 
 .cs-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cs-icons{margin-top:6px;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cs-icons::-webkit-scrollbar{display:none}
+.cs-ib{flex:0 0 auto;width:36px;height:34px;border:1px solid var(--line);background:#f8fafc;border-radius:9px;font-size:15px;cursor:pointer;color:#334155;display:inline-grid;place-items:center;position:relative;font-family:inherit}
+.cs-ib small{position:absolute;top:1px;right:4px;font-size:9px;font-weight:800;color:#1d4ed8}.cs-ib.danger{color:#b91c1c}
+.cs-follow{display:inline-flex;align-items:center;gap:2px;background:#eef2ff;border-radius:9px;padding:1px}.cs-ft{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#1e3a5f;padding:0 6px;white-space:nowrap}
+.cs-dchips{display:inline-flex;gap:3px}.cs-dchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;color:#475569;font-family:inherit}.cs-dchip.on{background:#1e3a5f;color:#fff;border-color:#1e3a5f}
+.cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cs-big{border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:14px 10px;font-weight:700;font-size:14px;cursor:pointer;text-align:left;font-family:inherit;color:#0f172a}.cs-big small{display:block;font-weight:600;color:#64748b;font-size:11px;margin-top:3px}
+.cs-hl{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto}.cs-hi{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}.cs-hi>div{flex:1}.cs-hi small{display:block;color:#64748b;font-size:11px}.cs-hi .sq{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+body.campo .lbl3.est.e10{font-size:12px;font-weight:800;color:#1e3a5f}body.campo .lbl3.est.foco{font-size:12.5px;color:#0f172a;background:rgba(255,255,255,.85);padding:0 4px;border-radius:4px}body.campo .lbl3.est.foco.e10{font-size:14px;color:#1d4ed8}
 .cs-acts{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}.cs-acts::-webkit-scrollbar{display:none}
 .cs-chip{flex:0 0 auto;border:2px solid var(--c);background:#fff;color:#0f172a;border-radius:999px;padding:7px 12px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
 .cs-chip.on{background:var(--c);color:#fff}
@@ -2933,11 +2941,11 @@ function buildTurbines(){
 /* ---------- rótulos HTML ---------- */
 function clearLabels(kind){ G3.labels = G3.labels.filter(l => { if(!kind || l.kind === kind){ l.el.remove(); return false; } return true; }); }
 function addLabel(kind, html, getPos, opt={}){
-  const el = document.createElement('div'); el.className = 'lbl3 ' + kind; el.innerHTML = html;
+  const el = document.createElement('div'); el.className = 'lbl3 ' + kind; el.innerHTML = html; if(opt.acc) el.dataset.acc = opt.acc;
   if(opt.style) Object.assign(el.style, opt.style);
   if(opt.onclick){ el.addEventListener('click', opt.onclick); }
   $('#labels').appendChild(el); needRender();
-  G3.labels.push({kind, el, getPos, min:opt.min ?? 0, max:opt.max ?? 1e9, layer:opt.layer, vis:false});
+  G3.labels.push({kind:kind.split(' ')[0], el, getPos, min:opt.min ?? 0, max:opt.max ?? 1e9, layer:opt.layer, vis:false});
 }
 function buildLabels(){
   clearLabels();
@@ -2949,7 +2957,7 @@ function buildLabels(){
     addLabel('acc', id, () => V3(m[0], m[1], m[2]).add(new THREE.Vector3(0,18,0)), {max:6500, min:250, layer:'labels'});
     const step = a.N > 60 ? 10 : 5;
     for(let s=0; s<=a.N+1e-6; s+=step){ const q = a.at(s);
-      addLabel('est', String(s), () => V3(q[0], q[1], q[2]).add(new THREE.Vector3(0,6,0)), {max:1400, layer:'est'}); }
+      addLabel('est' + (s % 10 === 0 ? ' e10' : ''), String(s), () => V3(q[0], q[1], q[2]).add(new THREE.Vector3(0,6,0)), {max:1400, layer:'est', acc:id}); }
   });
   (GEO.towns || []).forEach(t => addLabel('town', `<b>${esc(t.name)}</b>`, () => V3(t.x, t.y, groundZ(t.x, t.y)).add(new THREE.Vector3(0, 60, 0)),
     {layer:'region', min: t.main ? 0 : 2500, style: t.main ? {} : {opacity:.8, fontSize:'10px'}}));
@@ -6488,7 +6496,7 @@ async function ocrFotosRDO(lista, onProg){
    - "Adicionar à tela inicial": o programa abre como aplicativo (manifesto embutido).
    Liga sozinho em telas de toque estreitas; pode ser ligado/desligado no menu ⋯ ou no botão 📱 do layout.
    ===================================================================== */
-const CAMPO = {on:false, paint:false, act:'LIMP', date:null, drag:null, pend:null, gps:{on:false, watch:null, pos:null, follow:true}};
+const CAMPO = {on:false, paint:false, act:'LIMP', date:null, drag:null, pend:null, acc:null, est:null, gps:{on:false, watch:null, pos:null, follow:true}};
 
 /* tipo de aparelho: celular / tablet / computador (toque + tamanho da tela + sistema) */
 function deviceInfo(){
@@ -6511,7 +6519,11 @@ function campoAuto(){
 function campoSet(on, remember){
   CAMPO.on = on; document.body.classList.toggle('campo', on); if(remember) pref('campo', on ? '1' : '0');
   const tb = $('#t-campo'); if(tb) tb.classList.toggle('on', on);
-  if(on){ if(UI.tab !== 'maquete') switchTab('maquete'); campoSheet(); if(!CAMPO.gps.on) gpsStart(); }
+  if(on){ if(UI.tab !== 'maquete') switchTab('maquete'); campoSheet(); if(!CAMPO.gps.on) gpsStart();
+    if(pref('campoInit') !== '1'){ pref('campoInit', '1'); if(deviceInfo().tipo === 'celular' && typeof setView === 'function') setTimeout(() => setView('planta'), 400); }   // celular: vista de cima por padrão (3D pelo botão Layout)
+    if(remember){ try{ if(deviceInfo().tipo !== 'computador' && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().then(() => { try{ screen.orientation.lock('portrait').catch(() => {}); }catch(e){} }).catch(() => {}); }catch(e){} }
+    if(pref('campoTut') !== '1') setTimeout(campoTutorial, 600);
+    campoEstLabels(); }
   else { if(CAMPO.gps.on) gpsStop(); const s = $('#campo'); if(s) s.style.display = 'none'; CAMPO.paint = false; CAMPO.drag = null; CAMPO.pend = null; campoPreview(null); if(typeof controls !== 'undefined' && controls) controls.enabled = true; }
   window.dispatchEvent(new Event('resize'));
 }
@@ -6531,14 +6543,29 @@ function campoSheet(msg, cls){
     <div class="cs-row" style="margin-top:6px">
       <button class="cs-btn ${CAMPO.paint ? 'on' : ''}" id="cs-paint">✏️ Pintar por toque</button>
       <input type="date" id="cs-date" value="${d}" max="${todayISO()}" title="Data do executado">
-      ${G.on && G.pos && G.pos.inside ? '<button class="cs-btn" id="cs-center" title="Centrar a vista em mim">◎ Onde estou</button>' : ''}
+      <span class="cs-dchips"><button class="cs-dchip ${d === todayISO() ? 'on' : ''}" data-dd="0">Hoje</button><button class="cs-dchip ${d === addDays(todayISO(), -1) ? 'on' : ''}" data-dd="-1">Ontem</button></span>
       <span style="flex:1"></span><button class="cs-btn" id="cs-min" title="Recolher o painel (fica só o mapa)">▾</button><button class="cs-btn" id="cs-x" title="Sair do modo campo">✕</button></div>
+    <div class="cs-row cs-icons">
+      <button class="cs-ib" id="cs-front" title="Ir para a frente de serviço da etapa escolhida">⚑</button>
+      <button class="cs-ib" id="cs-list" title="Lançar pela lista: parque → acesso → estacas">≡</button>
+      <button class="cs-ib" id="cs-foto" title="Fotografar o trecho (associa ao acesso e à estaca)">📷</button>
+      <button class="cs-ib" id="cs-hoje" title="Lançamentos de hoje">🗒<small>${campoHoje().length || ''}</small></button>
+      ${G.on && G.pos && G.pos.inside ? '<button class="cs-ib" id="cs-center" title="Centrar a vista em mim">◎</button>' : ''}
+      <span style="flex:1"></span>
+      ${CAMPO.acc ? `<span class="cs-follow" title="Seguir a via: avança/recua 5 estacas com a câmera alinhada ao eixo"><button class="cs-ib" id="cs-prev">◀</button><span class="cs-ft" id="cs-ft">${esc(CAMPO.acc)} · Est. ${fmtEst(CAMPO.est ?? 0)}</span><button class="cs-ib" id="cs-next">▶</button></span>` : ''}
+    </div>
     <div class="cs-msg ${cls || ''}" id="cs-msg">${msg || (CAMPO.paint ? `Toque na via onde a <b>${ACT[CAMPO.act].short.toLowerCase()}</b> começou e arraste até onde terminou.` : 'Ative <b>Pintar por toque</b> para lançar o executado arrastando na via. Um dedo move o mapa; dois dedos aproximam e giram.')}</div>
     <div class="cs-confirm" id="cs-conf" style="display:none"></div>`;
   $$('#campo .cs-chip').forEach(b => b.onclick = () => { CAMPO.act = b.dataset.a; ENTRY.act = CAMPO.act; campoSheet(); if(CAMPO.pend){ campoPreview(CAMPO.pend); campoPendUI(); } });
   $('#cs-paint').onclick = () => { CAMPO.paint = !CAMPO.paint; if(!CAMPO.paint){ CAMPO.drag = null; CAMPO.pend = null; campoPreview(null); controls.enabled = true; } campoSheet(); };
   if(CAMPO.pend && CAMPO.paint && !msg) campoPendUI();
-  $('#cs-date').onchange = e => { CAMPO.date = e.target.value || null; };
+  $('#cs-date').onchange = e => { CAMPO.date = e.target.value || null; campoSheet(); };
+  $$('#campo .cs-dchip').forEach(b => b.onclick = () => { CAMPO.date = addDays(todayISO(), +b.dataset.dd); campoSheet(); });
+  $('#cs-front').onclick = () => { const f = fronts()[CAMPO.act]; if(!f){ campoMsg(`Nenhuma frente de ${ACT[CAMPO.act].short.toLowerCase()} executada até a data.`); return; } campoGo(f.acc, f.est); campoMsg(`⚑ Frente de ${ACT[CAMPO.act].short.toLowerCase()}: <b>${esc(f.acc)}</b> Est. <b>${fmtEst(f.est)}</b>${f.implied ? ' (implícita)' : ''}.`); };
+  $('#cs-list').onclick = campoLista;
+  $('#cs-foto').onclick = () => { let i = $('#cs-fotoin'); if(!i){ i = document.createElement('input'); i.type = 'file'; i.id = 'cs-fotoin'; i.accept = 'image/*'; i.capture = 'environment'; i.style.display = 'none'; document.body.appendChild(i); i.onchange = () => { if(i.files.length) campoFoto([...i.files]); i.value = ''; }; } i.click(); };
+  $('#cs-hoje').onclick = campoHojeModal;
+  const pv = $('#cs-prev'), nx = $('#cs-next'); if(pv){ pv.onclick = () => campoStep(-5); nx.onclick = () => campoStep(5); }
   const c = $('#cs-center'); if(c) c.onclick = () => gpsCenter();
   $('#cs-x').onclick = () => campoSet(false, true);
   $('#cs-min').onclick = () => { pref('campoMin', '1'); campoSheet(); };
@@ -6610,7 +6637,7 @@ function campoPendUI(live){
     if(date > todayISO()) return campoMsg('A data não pode ser futura.', 'err');
     const acc = P.acc; CAMPO.pend = null; campoPreview(null);
     const r = addExec({act:CAMPO.act, acc, e0:a, e1:b, date}); r.src = 'campo'; save();
-    if(navigator.vibrate) navigator.vibrate([20, 40, 20]);
+    if(navigator.vibrate) navigator.vibrate([20, 40, 20]); campoBeep();
     campoSheet(`✓ <b>${A.short}</b> · ${esc(acc)} Est. ${fmtEst(a)} → ${fmtEst(b)} (${fmtN(Math.abs(b - a) * EST)} m) lançada em ${fmtD(date)}. Pode continuar pintando.`, 'ok');
   };
 }
@@ -6626,7 +6653,7 @@ function campoBind(){
     try{ canvas.setPointerCapture(e.pointerId); }catch(x){}
     let P = CAMPO.pend;
     if(!P || P.acc !== h.acc){ P = CAMPO.pend = {acc:h.acc, lo:S.est, hi:S.est, dir:0}; }   // acesso novo: começa aqui
-    CAMPO.drag = {id:e.pointerId, s0:S.est, last:S.est};
+    CAMPO.drag = {id:e.pointerId, s0:S.est, last:S.est}; campoFocus(h.acc, S.est);
     if(navigator.vibrate) navigator.vibrate(12);
     campoPreview(P); campoPendUI(S.est);
   }, true);
@@ -6721,6 +6748,96 @@ function campoInit(){
   try{ matchMedia('(max-width:1100px)').addEventListener('change', () => { if(pref('campo') == null) campoSet(campoAuto(), false); }); }catch(e){}
 }
 setTimeout(campoInit, 100);
+
+/* =====================================================================
+   Atalhos discretos do modo campo
+   ===================================================================== */
+/* acesso/estaca em foco (seguir a via, rótulos destacados) */
+function campoFocus(acc, est){
+  const changed = CAMPO.acc !== acc; CAMPO.acc = acc; CAMPO.est = Math.round(est * 2) / 2; UI.focusAcc = acc;
+  const ft = $('#cs-ft'); if(ft && !changed) ft.textContent = `${acc} · Est. ${fmtEst(CAMPO.est)}`; else if(changed && !CAMPO.drag) campoSheet();
+  campoEstLabels();
+}
+function campoEstLabels(){ const f = CAMPO.on ? CAMPO.acc : null; $$('#labels .lbl3.est').forEach(el => el.classList.toggle('foco', !!f && el.dataset.acc === f)); }
+/* vai até a estaca de um acesso com a câmera alinhada ao eixo (olhando no sentido de avanço) */
+function campoGo(acc, est, dist){
+  const a = ACC[acc]; if(!a) return; est = Math.max(0, Math.min(a.N, est)); campoFocus(acc, est);
+  const q = a.at(est), q2 = a.at(Math.min(a.N, est + 1)), q1 = a.at(Math.max(0, est - 1));
+  const dx = q2[0] - q1[0], dy = q2[1] - q1[1], seq = SEQ.find(x => x.acc === acc), dir = seq && seq.d < 0 ? -1 : 1;   // sentido de execução
+  const az = Math.atan2(-dx * dir, dy * dir);   // câmera atrás do ponto, olhando para a frente da via
+  flyTo(V3(q[0], q[1], q[2]), dist || 320, UI.view === '2d' ? 0.001 : 0.95, az, 700);
+}
+function campoStep(n){ if(!CAMPO.acc) return; const seq = SEQ.find(x => x.acc === CAMPO.acc), dir = seq && seq.d < 0 ? -1 : 1; campoGo(CAMPO.acc, (CAMPO.est ?? 0) + n * dir); if(navigator.vibrate) navigator.vibrate(5); }
+
+/* lançar pela lista: parque → acesso → estacas (três toques, teclado numérico) */
+function campoLista(){
+  const close = () => $('#modal-bg').style.display = 'none';
+  const step1 = () => { $('#modal').innerHTML = `<h3>≡ Lançar pela lista · ${ACT[CAMPO.act].short}</h3><p class="note" style="margin:-4px 0 8px">1 · Toque no parque</p>
+      <div class="cs-grid">${PARKS_UI.map(p => `<button class="cs-big" data-p="${esc(p.name)}">${esc(p.name)}<small>${p.accs.length} acesso(s)</small></button>`).join('')}</div>
+      <div class="foot"><button class="btn" id="cl-x">Fechar</button></div>`; $('#modal-bg').style.display = 'grid'; $('#cl-x').onclick = close;
+    $$('#modal [data-p]').forEach(b => b.onclick = () => step2(b.dataset.p)); };
+  const step2 = park => { const P = PARK[park]; $('#modal').innerHTML = `<h3>≡ ${esc(park)}</h3><p class="note" style="margin:-4px 0 8px">2 · Toque no acesso</p>
+      <div class="cs-grid">${P.accs.map(id => { const f = Object.values(fronts()).filter(x => x.acc === id); return `<button class="cs-big" data-a="${id}">${id}<small>0 a ${fmtEst(ACC[id].N)}${f.length ? ' · frente ' + fmtEst(f[0].est) : ''}</small></button>`; }).join('')}</div>
+      <div class="foot"><button class="btn" id="cl-b">‹ Parques</button><span style="flex:1"></span><button class="btn" id="cl-x">Fechar</button></div>`;
+    $('#cl-b').onclick = step1; $('#cl-x').onclick = close; $$('#modal [data-a]').forEach(b => b.onclick = () => step3(park, b.dataset.a)); };
+  const step3 = (park, acc) => { const f = fronts()[CAMPO.act], sug = f && f.acc === acc ? fmtEst(f.est) : '';
+    $('#modal').innerHTML = `<h3>≡ ${esc(acc)} · ${ACT[CAMPO.act].short}</h3><p class="note" style="margin:-4px 0 8px">3 · Estacas (0 a ${fmtEst(ACC[acc].N)}) e data</p>
+      <div class="cs-cf" style="margin:0 0 8px"><label>Da estaca<input id="cl-e0" value="${sug}" inputmode="decimal" placeholder="ex. 177" style="font-size:18px"></label><label>À estaca<input id="cl-e1" inputmode="decimal" placeholder="ex. 150+10" style="font-size:18px"></label></div>
+      <div class="cs-cf" style="margin:0 0 8px"><label>Data<input type="date" id="cl-d" value="${CAMPO.date || todayISO()}" max="${todayISO()}"></label><span class="cs-m" id="cl-m">—</span></div>
+      <div class="cs-msg err" id="cl-msg"></div>
+      <div class="foot"><button class="btn" id="cl-b">‹ Acessos</button><span style="flex:1"></span><button class="btn" id="cl-x">Fechar</button><button class="btn pri" id="cl-ok">✓ Lançar</button></div>`;
+    const upd = () => { const a = parseEst($('#cl-e0').value), b = parseEst($('#cl-e1').value); $('#cl-m').textContent = a != null && b != null ? fmtN(Math.abs(b - a) * EST) + ' m' : '—'; };
+    $('#cl-e0').oninput = upd; $('#cl-e1').oninput = upd; $('#cl-b').onclick = () => step2(park); $('#cl-x').onclick = close;
+    $('#cl-ok').onclick = () => { const a = parseEst($('#cl-e0').value), b = parseEst($('#cl-e1').value), N = ACC[acc].N, date = $('#cl-d').value, m = $('#cl-msg');
+      if(a == null || b == null) return m.textContent = 'Informe as duas estacas (ex.: 177 ou 150+10).';
+      if(a < 0 || b < 0 || a > N || b > N) return m.textContent = `Estacas fora do acesso (0 a ${fmtEst(N)}).`;
+      if(a === b) return m.textContent = 'As estacas inicial e final são iguais.';
+      if(!date || date > todayISO()) return m.textContent = 'Data inválida ou futura.';
+      const r = addExec({act:CAMPO.act, acc, e0:a, e1:b, date}); r.src = 'campo'; save(); CAMPO.date = date; close(); campoBeep(); if(navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      campoGo(acc, (a + b) / 2, Math.max(300, Math.abs(b - a) * EST * 1.3));
+      campoSheet(`✓ <b>${ACT[CAMPO.act].short}</b> · ${esc(acc)} Est. ${fmtEst(a)} → ${fmtEst(b)} (${fmtN(Math.abs(b - a) * EST)} m) lançada em ${fmtD(date)}.`, 'ok'); };
+    setTimeout(() => $(sug ? '#cl-e1' : '#cl-e0').focus(), 50); };
+  step1();
+}
+
+/* lançamentos de hoje (toque em ✕ para excluir, com senha) */
+function campoHoje(){ const d = CAMPO.date || todayISO(); return DB.records.filter(r => r.kind === 'exec' && !r.antes && r.date === d); }
+function campoHojeModal(){
+  const d = CAMPO.date || todayISO(), L = campoHoje().slice().reverse(), close = () => $('#modal-bg').style.display = 'none';
+  $('#modal').innerHTML = `<h3>🗒 Lançamentos de ${fmtDY(d)}</h3>
+    ${L.length ? `<div class="cs-hl">${L.map(r => `<div class="cs-hi"><span class="sq" style="background:${ACT[r.act].color}"></span><div><b>${ACT[r.act].short}</b> · ${esc(r.acc)} Est. ${fmtEst(r.e0)} → ${fmtEst(r.e1)}<small>${fmtN(Math.abs(r.e1 - r.e0) * EST)} m · ${esc(r.src || 'planilha')}</small></div><button class="cs-ib" data-go="${r.id}" title="Ver na via">◎</button><button class="cs-ib danger" data-del="${r.id}" title="Excluir">✕</button></div>`).join('')}</div>` : '<p class="note">Nenhum lançamento nesta data.</p>'}
+    <div class="foot"><button class="btn" id="ch-x">Fechar</button></div>`;
+  $('#modal-bg').style.display = 'grid'; $('#ch-x').onclick = close;
+  $$('#modal [data-go]').forEach(b => b.onclick = () => { const r = DB.records.find(x => x.id === b.dataset.go); close(); if(r) campoGo(r.acc, (r.e0 + r.e1) / 2, Math.max(300, Math.abs(r.e1 - r.e0) * EST * 1.3)); });
+  $$('#modal [data-del]').forEach(b => b.onclick = async () => { const r = DB.records.find(x => x.id === b.dataset.del); if(!r) return;
+    if(!await senhaOK(`Excluir ${ACT[r.act].short} · ${r.acc} Est. ${fmtEst(r.e0)} → ${fmtEst(r.e1)}?`)) return;
+    DB.records = DB.records.filter(x => x !== r); save(); refreshTime(); campoHojeModal(); campoSheet('Lançamento excluído.'); });
+}
+
+/* foto do trecho: usa o GPS da foto; sem ele, a posição atual do aparelho; sem GPS, o acesso/estaca em foco */
+async function campoFoto(files){
+  DB.fotos = DB.fotos || []; const before = new Set(DB.fotos.map(o => o.id));
+  await addFotos(files);
+  const novas = DB.fotos.filter(o => !before.has(o.id)); let fixadas = 0;
+  novas.forEach(o => { if(o.acc) return; const P = CAMPO.gps.pos;
+    if(P && P.inside){ const s = snapEstaca(P.x, P.y, 400); if(s){ o.x = P.x; o.y = P.y; o.acc = s.acc; o.est = Math.round(s.est * 10) / 10; o.dist = Math.round(s.d); o.gps = true; fixadas++; return; } }
+    if(CAMPO.acc){ o.acc = CAMPO.acc; o.est = CAMPO.est ?? 0; fixadas++; } });
+  if(fixadas) save();
+  const o = novas[0]; if(o && o.acc) campoMsg(`📷 Foto guardada em <b>${esc(o.acc)}</b> Est. <b>${fmtEst(Math.round(o.est * 2) / 2)}</b> (${fmtD(o.date)}). Ela entra no vídeo e no relatório.`); else if(o) campoMsg('📷 Foto guardada sem posição: informe acesso e estaca na janela do vídeo (Fotos).');
+}
+
+/* som curto e discreto ao lançar */
+function campoBeep(){ try{ const C = campoBeep.ctx || (campoBeep.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = C.createOscillator(), g = C.createGain(); o.frequency.value = 880; g.gain.value = 0.04; o.connect(g); g.connect(C.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, C.currentTime + 0.12); o.stop(C.currentTime + 0.13); }catch(e){} }
+
+/* tutorial de primeiro uso: três passos, uma vez só */
+function campoTutorial(){
+  const steps = [['1 · Escolha a etapa', 'Toque num dos chips (Limpeza, Lançamento, Base…). É ela que será pintada na via.'], ['2 · Pinte na via', 'Ative <b>✏️ Pintar por toque</b>, toque na via onde começou e arraste até onde terminou. Pode continuar depois de qualquer ponto; o trecho acumula.'], ['3 · Lance', 'Confira as estacas e toque em <b>✓ Lançar</b>. Sem o mapa: ≡ lista (parque → acesso → estacas). ⚑ leva à frente, ◀ ▶ seguem a via, 📷 fotografa o trecho, 🗒 mostra o que já foi lançado hoje, ▾ recolhe o painel.']];
+  let i = 0; const close = () => { pref('campoTut', '1'); $('#modal-bg').style.display = 'none'; };
+  const show = () => { const [t, d] = steps[i]; $('#modal').innerHTML = `<h3>${t}</h3><p style="font-size:13.5px;line-height:1.55;margin:4px 0 12px">${d}</p>
+      <div class="foot"><span class="note">${i + 1} de ${steps.length}</span><span style="flex:1"></span><button class="btn" id="tt-x">Pular</button><button class="btn pri" id="tt-n">${i < steps.length - 1 ? 'Próximo ›' : 'Entendi'}</button></div>`;
+    $('#modal-bg').style.display = 'grid'; $('#tt-x').onclick = close; $('#tt-n').onclick = () => { if(++i >= steps.length) close(); else show(); }; };
+  show();
+}
 
 </script>
 </body>
